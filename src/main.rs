@@ -1,8 +1,11 @@
+extern crate time;
+
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::collections::HashSet;
-use std::collections::HashMap;
+use time::PreciseTime;
 
 enum ErrorCodes {
     WrongParameters,
@@ -21,15 +24,21 @@ fn main() {
             Some(result) => {
                 match result {
                     Ok(line) => {
-                        let draw = LotteryDraw::from_line(line);
-                        match draw {
-                            Some(d) => games.count(&d).print(),
-                            None => eprintln!("Invalid input")
-                        };
+                        if line.is_empty() {
+                            wait_for_input = false;
+                        } else {
+                            let start = PreciseTime::now();
+                            let draw = LotteryDraw::from_line(line);
+                            match draw {
+                                Some(d) => games.count(&d).print(),
+                                None => {}
+                            };
+                            let end = PreciseTime::now();
+                            println!("Output generated in {}", start.to(end));
+                        }
                     },
                     Err(e) => {
-                        eprintln!("Cannot read from stdin"); 
-                        eprintln!("{}", e);
+                        eprintln!("Cannot read from stdin: {}", e); 
                         std::process::exit(exit_code(ErrorCodes::IoError));
                     }
                 }
@@ -70,8 +79,7 @@ impl FileReader {
         let input_file = match File::open(self.name.to_string()) {
             Ok(f) => f,
             Err(e) => {
-               eprintln!("Cannot open input file: {}", self.name); 
-               eprintln!("{}", e);
+               eprintln!("Cannot open input file {}: {}", self.name, e);
                std::process::exit(exit_code(ErrorCodes::IoError)); 
             },
         };
@@ -79,8 +87,7 @@ impl FileReader {
             match line {
                 Ok(l) => result.add(LotteryGame::from_line(l)),
                 Err(e) => {
-                    eprintln!("Error while reading file: {}", self.name); 
-                    eprintln!("{}", e);
+                    eprintln!("Error while reading file {}: {}", self.name, e); 
                     std::process::exit(exit_code(ErrorCodes::IoError));                     
                 }
             }            
@@ -128,8 +135,8 @@ impl LotteryGame {
             match integer {
                 Ok(i) => { result.numbers.insert(i); },
                 Err(e) => {
-                    eprintln!("Error while reading games. Line skipped: {}", line); 
-                    eprintln!("{}", e);
+                    eprintln!("Error while reading games: {}. Line skipped: {}",
+                        e, line);
                 }
             }            
         }
@@ -154,8 +161,7 @@ impl LotteryDraw {
             match integer {
                 Ok(i) => result.numbers.push(i),
                 Err(e) => {
-                    eprintln!("Could not convert the number {}", number); 
-                    eprintln!("{}", e);
+                    eprintln!("Could not convert the number {}: {}", number, e);
                     return None;
                 }
             }            
