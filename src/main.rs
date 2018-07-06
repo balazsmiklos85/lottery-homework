@@ -188,8 +188,10 @@ impl LotteryResult {
         let mut numbers_matching = 5;
         while numbers_matching > 1 {
             match self.game_counts_by_matches.get(&numbers_matching) {
-                Some(winners) => println!("{number:<width$} | {winner:>width$}", number=numbers_matching, winner=winners, width=6),
-                None => println!("{} | {}", numbers_matching, 0),
+                Some(winners) => println!("{}                | {}",
+                                    numbers_matching, winners),
+                None => println!("{}                | {}",
+                            numbers_matching, 0),
             }
             numbers_matching -= 1;
         }        
