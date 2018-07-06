@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 
 enum ErrorCodes {
-    WRONG_PARAMETERS,
-    IO_ERROR,
+    WrongParameters,
+    IoError,
 }
 
 fn main() {
@@ -32,15 +32,15 @@ fn get_input_file_name() -> String {
         None => {
             eprintln!("Wrong amount of arguments");
             eprintln!("Usage: ./lottery_homework input_file.name");
-            std::process::exit(exit_code(ErrorCodes::WRONG_PARAMETERS));
+            std::process::exit(exit_code(ErrorCodes::WrongParameters));
         },
     }
 }
 
 fn exit_code(error_code: ErrorCodes) -> i32 {
     match error_code {
-        ErrorCodes::WRONG_PARAMETERS => return 1,
-        ErrorCodes::IO_ERROR => return 2,
+        ErrorCodes::WrongParameters => return 1,
+        ErrorCodes::IoError => return 2,
     }
 }
 
@@ -56,7 +56,7 @@ impl FileReader {
             Err(e) => {
                eprintln!("Cannot open input file: {}", self.name); 
                eprintln!("{}", e);
-               std::process::exit(exit_code(ErrorCodes::IO_ERROR)); 
+               std::process::exit(exit_code(ErrorCodes::IoError)); 
             },
         };
         for line in BufReader::new(input_file).lines() {
@@ -65,7 +65,7 @@ impl FileReader {
                 Err(e) => {
                     eprintln!("Error while reading file: {}", self.name); 
                     eprintln!("{}", e);
-                    std::process::exit(exit_code(ErrorCodes::IO_ERROR));                     
+                    std::process::exit(exit_code(ErrorCodes::IoError));                     
                 }
             }            
         }
