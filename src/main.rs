@@ -8,7 +8,7 @@ use std::io::{self, BufRead, BufReader};
 use time::PreciseTime;
 
 static DRAWN_NUMBERS: usize = 5;
-static MAX_NUMBER: i32 = 90;
+static MAX_NUMBER: u8 = 90;
 
 enum ErrorCodes {
     WrongParameters,
@@ -128,7 +128,7 @@ impl LotteryGames {
 }
 
 struct LotteryGame {
-    numbers: HashSet<i32>,
+    numbers: HashSet<u8>,
 }
 
 impl LotteryGame {
@@ -140,7 +140,7 @@ impl LotteryGame {
         let mut result = LotteryGame::new();
         let numbers = line.split(" ");
         for number in numbers {
-            let integer = number.parse();
+            let integer = number.parse::<u8>();
             match integer {
                 Ok(i) => {
                     if i > MAX_NUMBER {
@@ -163,7 +163,7 @@ impl LotteryGame {
 }
 
 struct LotteryDraw {
-    numbers: Vec<i32>,
+    numbers: Vec<u8>,
 }
 
 impl LotteryDraw {
@@ -175,7 +175,7 @@ impl LotteryDraw {
         let mut result = LotteryDraw::new();
         let numbers = line.split(" ");
         for number in numbers {
-            let integer = number.parse();
+            let integer = number.parse::<u8>();
             match integer {
                 Ok(i) => {
                     if i > MAX_NUMBER {
