@@ -7,6 +7,9 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use time::PreciseTime;
 
+static DRAWN_NUMBERS: usize = 5;
+static MAX_NUMBER: i32 = 90;
+
 enum ErrorCodes {
     WrongParameters,
     IoError,
@@ -30,8 +33,8 @@ fn main() {
                             let start = PreciseTime::now();
                             let draw = LotteryDraw::from_line(line);
                             match draw {
-                                Some(d) => games.count(&d).print(),
-                                None => {}
+                                Ok(d) => games.count(&d).print(),
+                                Err(e) => eprintln!("Invalid input: {}", e),
                             };
                             let end = PreciseTime::now();
                             println!("Output generated in {}", start.to(end));
@@ -85,7 +88,13 @@ impl FileReader {
         };
         for line in BufReader::new(input_file).lines() {
             match line {
-                Ok(l) => result.add(LotteryGame::from_line(l)),
+                Ok(l) => {
+                    let game = LotteryGame::from_line(l);
+                    match game {
+                        Ok(g) => result.add(g),
+                        Err(e) => eprintln!("Error: {}. Line ignored", e),  
+                    };
+                },
                 Err(e) => {
                     eprintln!("Error while reading file {}: {}", self.name, e); 
                     std::process::exit(exit_code(ErrorCodes::IoError));                     
@@ -127,20 +136,29 @@ impl LotteryGame {
         return LotteryGame { numbers: HashSet::new() };
     }
 
-    fn from_line(line: String) -> LotteryGame {
+    fn from_line(line: String) -> Result<LotteryGame, String> {
         let mut result = LotteryGame::new();
         let numbers = line.split(" ");
         for number in numbers {
             let integer = number.parse();
             match integer {
-                Ok(i) => { result.numbers.insert(i); },
-                Err(e) => {
-                    eprintln!("Error while reading games: {}. Line skipped: {}",
-                        e, line);
-                }
+                Ok(i) => {
+                    if i > MAX_NUMBER {
+                        return Err(format!("Number too high ({})", i));
+                    }
+                    if result.numbers.contains(&i) {
+                        return Err(format!("Number found twice ({})", i));
+                    }
+                    result.numbers.insert(i);
+                },
+                Err(e) => return Err(format!("{}", e))
             }            
         }
-        return result;
+        if result.numbers.len() > DRAWN_NUMBERS {
+            return Err(format!("Too many lines in line ({})",
+                result.numbers.len()));    
+        }
+        return Ok(result);
     }
 }
 
@@ -153,20 +171,28 @@ impl LotteryDraw {
         return LotteryDraw { numbers: Vec::new() };
     }
 
-    fn from_line(line: String) -> Option<LotteryDraw> {
+    fn from_line(line: String) -> Result<LotteryDraw, String> {
         let mut result = LotteryDraw::new();
         let numbers = line.split(" ");
         for number in numbers {
             let integer = number.parse();
             match integer {
-                Ok(i) => result.numbers.push(i),
-                Err(e) => {
-                    eprintln!("Could not convert the number {}: {}", number, e);
-                    return None;
-                }
+                Ok(i) => {
+                    if i > MAX_NUMBER {
+                        return Err(format!("Number too high ({})", i));
+                    }
+                    result.numbers.push(i);
+                },
+                Err(e) => return Err(
+                            format!("Could not convert the number {}: {}",
+                                number, e))
             }            
         }
-        return Some(result);
+        if result.numbers.len() > DRAWN_NUMBERS {
+            return Err(format!("Too many numbers drawn ({})",
+                       result.numbers.len()));
+        }
+        return Ok(result);
     }
 
     fn count(&self, game: &LotteryGame) -> i32 {
