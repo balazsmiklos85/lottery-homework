@@ -1,7 +1,6 @@
 extern crate time;
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
@@ -128,12 +127,12 @@ impl LotteryGames {
 }
 
 struct LotteryGame {
-    numbers: HashSet<u8>,
+    numbers: Vec<u8>,
 }
 
 impl LotteryGame {
     fn new() -> LotteryGame {
-        return LotteryGame { numbers: HashSet::new() };
+        return LotteryGame { numbers: Vec::new() };
     }
 
     fn from_line(line: String) -> Result<LotteryGame, String> {
@@ -149,7 +148,7 @@ impl LotteryGame {
                     if result.numbers.contains(&i) {
                         return Err(format!("Number found twice ({})", i));
                     }
-                    result.numbers.insert(i);
+                    result.numbers.push(i);
                 },
                 Err(e) => return Err(format!("{}", e))
             }            
