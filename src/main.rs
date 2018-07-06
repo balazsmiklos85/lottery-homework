@@ -1,7 +1,8 @@
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Result};
+use std::io::{BufRead, BufReader};
 use std::collections::HashSet;
+use std::collections::HashMap;
 
 enum ErrorCodes {
     WRONG_PARAMETERS,
@@ -11,21 +12,15 @@ enum ErrorCodes {
 fn main() {
     let file_name = get_input_file_name();
     let file_reader = FileReader { name: file_name };
-    let input = file_reader.read();
+    let games = file_reader.read();
     println!("READY");
-    //#include <stdio.h>
-    //int main() {
-    //    int a,b,c,d,e;
-    //    printf("READY\n");
-    //    int i = 5;
-    //    while(i == 5) {
-    //        i = scanf("%d %d %d %d %d", &a, &b, &c, &d, &e);
-    //        if(i == 5) {
-    //            printf("%d %d %d %d\n", 0, 1, 2, 3);
-    //        }
-    //    }
-    //    return 0;
-    //}
+    let mut wait_for_input = true;
+    while wait_for_input {
+        //TODO read line from stdin
+        let draw = LotteryDraw { numbers: vec![1, 2, 3, 4, 5] };
+        let results = games.count(&draw);
+        results.print();
+    }
 }
 
 fn get_input_file_name() -> String {
@@ -90,6 +85,14 @@ impl LotteryGames {
     fn add(&mut self, game: LotteryGame) {
         self.games.push(game);
     }
+
+    fn count(&self, draw: &LotteryDraw) -> LotteryResult {
+        let mut result = LotteryResult::new();
+        for game in &(self.games) {
+            result.increase(draw.count(&game));
+        }
+        return result;
+    }
 }
 
 struct LotteryGame {
@@ -105,5 +108,44 @@ impl LotteryGame {
         let mut result = LotteryGame::new();
         //TODO: handle line
         return result;
+    }
+}
+
+struct LotteryDraw {
+    numbers: Vec<i32>,
+}
+
+impl LotteryDraw {
+    fn count(&self, game: &LotteryGame) -> i32 {
+        let mut result = 0;
+        for number in &(self.numbers) {
+            if game.numbers.contains(&number) {
+                result += 1;
+            }
+        }
+        return result;
+    }
+}
+
+struct LotteryResult {
+    game_counts_by_matches: HashMap<i32, i32>
+}
+
+impl LotteryResult {
+    fn new() -> LotteryResult {
+        return LotteryResult { game_counts_by_matches: HashMap::new() };
+    }
+
+    fn print(&self) {
+        //TODO print result
+    }
+
+    fn increase(&mut self, matching_numbers: i32) {
+        let mut new_value = 1;
+        match self.game_counts_by_matches.get(&matching_numbers) {
+            Some(previous_value) => new_value += previous_value,
+            None => {}
+        }
+        self.game_counts_by_matches.insert(matching_numbers, new_value);
     }
 }
