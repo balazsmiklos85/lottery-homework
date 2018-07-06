@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader};
 use std::collections::HashSet;
 use std::collections::HashMap;
 
@@ -15,11 +15,27 @@ fn main() {
     let games = file_reader.read();
     println!("READY");
     let mut wait_for_input = true;
+    let stdin = io::stdin();
     while wait_for_input {
-        //TODO read line from stdin
-        let draw = LotteryDraw { numbers: vec![1, 2, 3, 4, 5] };
-        let results = games.count(&draw);
-        results.print();
+        match stdin.lock().lines().next() {
+            Some(result) => {
+                match result {
+                    Ok(line) => {
+                        let draw = LotteryDraw::from_line(line);
+                        match draw {
+                            Some(d) => games.count(&d).print(),
+                            None => eprintln!("Invalid input")
+                        };
+                    },
+                    Err(e) => {
+                        eprintln!("Cannot read from stdin"); 
+                        eprintln!("{}", e);
+                        std::process::exit(exit_code(ErrorCodes::IoError));
+                    }
+                }
+            } 
+            None => wait_for_input = false
+        };        
     }
 }
 
@@ -106,7 +122,17 @@ impl LotteryGame {
 
     fn from_line(line: String) -> LotteryGame {
         let mut result = LotteryGame::new();
-        //TODO: handle line
+        let numbers = line.split(" ");
+        for number in numbers {
+            let integer = number.parse();
+            match integer {
+                Ok(i) => { result.numbers.insert(i); },
+                Err(e) => {
+                    eprintln!("Error while reading games. Line skipped: {}", line); 
+                    eprintln!("{}", e);
+                }
+            }            
+        }
         return result;
     }
 }
@@ -116,6 +142,27 @@ struct LotteryDraw {
 }
 
 impl LotteryDraw {
+    fn new() -> LotteryDraw {
+        return LotteryDraw { numbers: Vec::new() };
+    }
+
+    fn from_line(line: String) -> Option<LotteryDraw> {
+        let mut result = LotteryDraw::new();
+        let numbers = line.split(" ");
+        for number in numbers {
+            let integer = number.parse();
+            match integer {
+                Ok(i) => result.numbers.push(i),
+                Err(e) => {
+                    eprintln!("Could not convert the number {}", number); 
+                    eprintln!("{}", e);
+                    return None;
+                }
+            }            
+        }
+        return Some(result);
+    }
+
     fn count(&self, game: &LotteryGame) -> i32 {
         let mut result = 0;
         for number in &(self.numbers) {
