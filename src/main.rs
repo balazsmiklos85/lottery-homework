@@ -1,4 +1,8 @@
+use std::env;
+
 fn main() {
+    let file_name = get_input_file_name();
+    println!("READY");
     //#include <stdio.h>
     //int main() {
     //    int a,b,c,d,e;
@@ -12,4 +16,18 @@ fn main() {
     //    }
     //    return 0;
     //}
+}
+
+fn get_input_file_name() -> String {
+    let mut arguments = env::args();
+    arguments.next();
+    let result = arguments.next();
+    match result {
+        Some(r) => return r,
+        None => {
+            eprintln!("Wrong amount of arguments");
+            eprintln!("Usage: ./lottery_homework input_file.name");
+            std::process::exit(1);
+        },
+    }
 }
