@@ -5,3 +5,5 @@ authors = ["bmiklos"]
 
 [dependencies]
 time = "*"
+#simple_parallel = "0.2.1"
+#rayon = "*"

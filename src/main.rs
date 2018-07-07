@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use time::PreciseTime;
+//use time::PreciseTime;
 
 static DRAWN_NUMBERS: usize = 5;
 static MAX_NUMBER: u8 = 90;
@@ -19,24 +19,25 @@ fn main() {
     let file_reader = FileReader { name: file_name };
     let games = file_reader.read();
     println!("READY");
-    let mut wait_for_input = true;
+    let mut wait_for_more_input = true;
     let stdin = io::stdin();
-    while wait_for_input {
+    while wait_for_more_input {
         match stdin.lock().lines().next() {
             Some(result) => {
                 match result {
                     Ok(line) => {
                         if line.is_empty() {
-                            wait_for_input = false;
+                            wait_for_more_input = false;
                         } else {
-                            let start = PreciseTime::now();
-                            let draw = LotteryDraw::from_line(line);
-                            match draw {
-                                Ok(d) => games.count(&d).print(),
+                            //let start = PreciseTime::now();
+                            let draw_from_line = LotteryDraw::from_line(line);
+                            match draw_from_line {
+                                Ok(draw) => games.count_game_matches(&draw)
+                                                 .print(),
                                 Err(e) => eprintln!("Invalid input: {}", e),
                             };
-                            let end = PreciseTime::now();
-                            println!("Output generated in {}", start.to(end));
+                            //let end = PreciseTime::now();
+                            //println!("Output generated in {}", start.to(end));
                         }
                     },
                     Err(e) => {
@@ -45,15 +46,15 @@ fn main() {
                     }
                 }
             } 
-            None => wait_for_input = false
+            None => wait_for_more_input = false // EOF?
         };        
     }
 }
 
 fn get_input_file_name() -> String {
     let mut arguments = env::args();
-    arguments.next();
-    let result = arguments.next();
+    arguments.next(); // arg[0] = executable
+    let result = arguments.next(); // arg[1] = input file
     match result {
         Some(r) => return r,
         None => {
@@ -62,8 +63,10 @@ fn get_input_file_name() -> String {
             std::process::exit(exit_code(ErrorCodes::WrongParameters));
         },
     }
+    // all other arguments are just disregarded
 }
 
+// TODO would be probably unnecessary with constants in a module
 fn exit_code(error_code: ErrorCodes) -> i32 {
     match error_code {
         ErrorCodes::WrongParameters => return 1,
@@ -71,6 +74,7 @@ fn exit_code(error_code: ErrorCodes) -> i32 {
     }
 }
 
+// TODO abstraction can be optimized away if necessary
 struct FileReader {
     name: String,
 }
@@ -85,10 +89,10 @@ impl FileReader {
                std::process::exit(exit_code(ErrorCodes::IoError)); 
             },
         };
-        for line in BufReader::new(input_file).lines() {
-            match line {
-                Ok(l) => {
-                    let game = LotteryGame::from_line(l);
+        for input_line in BufReader::new(input_file).lines() {
+            match input_line {
+                Ok(line) => {
+                    let game = LotteryGame::from_line(line);
                     match game {
                         Ok(g) => result.add(g),
                         Err(e) => eprintln!("Error: {}. Line ignored", e),  
@@ -104,6 +108,7 @@ impl FileReader {
     }
 }
 
+// TODO abstaction can be optimized away if necessary
 struct LotteryGames {
     games: Vec<LotteryGame>
 }
@@ -117,15 +122,23 @@ impl LotteryGames {
         self.games.push(game);
     }
 
-    fn count(&self, draw: &LotteryDraw) -> LotteryResult {
-        let mut result = LotteryResult::new();
+    // TODO possibly could be optimized for berrer performance
+    // ( ) paralelization should make this run faster 
+    //     -> pro: does not require thread creation as ofthen as in
+    //     count_matching_numbers(), so it shouldn't cause problems
+    //     -> con: I should learn to handle threading in Rust properly to see
+    //     how can I borrow match_counts mutably from the threads
+    fn count_game_matches(&self, draw: &LotteryDraw) -> LotteryResult {
+        let mut match_counts = LotteryResult::new();
         for game in &(self.games) {
-            result.increase(draw.count(&game));
+            let matching_numbers = draw.count_matching_numbers(&game);
+            match_counts.increase_count_for(matching_numbers);
         }
-        return result;
+        return match_counts;
     }
 }
 
+// TODO abstaction can be optimized away if necessary
 struct LotteryGame {
     numbers: Vec<u8>,
 }
@@ -137,8 +150,8 @@ impl LotteryGame {
 
     fn from_line(line: String) -> Result<LotteryGame, String> {
         let mut result = LotteryGame::new();
-        let numbers = line.split(" ");
-        for number in numbers {
+        let split_line = line.split(" ");
+        for number in split_line {
             let integer = number.parse::<u8>();
             match integer {
                 Ok(i) => {
@@ -161,6 +174,7 @@ impl LotteryGame {
     }
 }
 
+// TODO abstaction can be optimized away if necessary
 struct LotteryDraw {
     numbers: Vec<u8>,
 }
@@ -171,7 +185,7 @@ impl LotteryDraw {
     }
 
     fn from_line(line: String) -> Result<LotteryDraw, String> {
-        let mut result = LotteryDraw::new();
+        let mut draw = LotteryDraw::new();
         let numbers = line.split(" ");
         for number in numbers {
             let integer = number.parse::<u8>();
@@ -180,60 +194,70 @@ impl LotteryDraw {
                     if i > MAX_NUMBER {
                         return Err(format!("Number too high ({})", i));
                     }
-                    result.numbers.push(i);
+                    draw.numbers.push(i);
                 },
                 Err(e) => return Err(
                             format!("Could not convert the number {}: {}",
                                 number, e))
             }            
         }
-        if result.numbers.len() > DRAWN_NUMBERS {
+        if draw.numbers.len() > DRAWN_NUMBERS {
             return Err(format!("Too many numbers drawn ({})",
-                       result.numbers.len()));
+                       draw.numbers.len()));
         }
-        return Ok(result);
+        return Ok(draw);
     }
 
-    fn count(&self, game: &LotteryGame) -> i32 {
-        let mut result = 0;
+    // TODO possibly could be optimized for berrer performance
+    // (x) contains() should run on HashSet faster
+    //     -> no, also it kills memory usage
+    // (x) contains() should run on BitSet faster 
+    //     -> maybe, not supported since 1.3
+    // (x) paralelization should make this run faster 
+    //     -> thread/work management can take more time than the gain
+    // (x) contains() should run faster on a sorted Vec -> apparently not (!?)
+    // ( ) custom data structure? (Vec<u8> based, working like a BitSet, but
+    //     hardcoded for the 5/90 lottery)
+    // ( ) maybe I just didn't use rayon properly, and paralelization could
+    //     still help?
+    fn count_matching_numbers(&self, game: &LotteryGame) -> i32 {
+        let mut matching_numbers = 0;
         for number in &(self.numbers) {
             if game.numbers.contains(&number) {
-                result += 1;
+                matching_numbers += 1;
             }
         }
-        return result;
+        return matching_numbers;
     }
 }
 
+// TODO abstaction can be optimized away if necessary
 struct LotteryResult {
-    game_counts_by_matches: HashMap<i32, i32>
+    winner_counts_by_matches: HashMap<i32, i32>
 }
 
 impl LotteryResult {
     fn new() -> LotteryResult {
-        return LotteryResult { game_counts_by_matches: HashMap::new() };
+        return LotteryResult { winner_counts_by_matches: HashMap::new() };
     }
 
     fn print(&self) {
-        println!("Numbers matching | Winners");
-        let mut numbers_matching = 5;
-        while numbers_matching > 1 {
-            match self.game_counts_by_matches.get(&numbers_matching) {
-                Some(winners) => println!("{}                | {}",
-                                    numbers_matching, winners),
-                None => println!("{}                | {}",
-                            numbers_matching, 0),
+        let mut numbers_matching = 2;
+        while numbers_matching <= 5 {
+            match self.winner_counts_by_matches.get(&numbers_matching) {
+                Some(winners) => print!("{} ", winners),
+                None => print!("{}", 0),
             }
-            numbers_matching -= 1;
+            numbers_matching += 1;
         }        
     }
 
-    fn increase(&mut self, matching_numbers: i32) {
+    fn increase_count_for(&mut self, matching_numbers: i32) {
         let mut new_value = 1;
-        match self.game_counts_by_matches.get(&matching_numbers) {
+        match self.winner_counts_by_matches.get(&matching_numbers) {
             Some(previous_value) => new_value += previous_value,
             None => {}
         }
-        self.game_counts_by_matches.insert(matching_numbers, new_value);
+        self.winner_counts_by_matches.insert(matching_numbers, new_value);
     }
 }
