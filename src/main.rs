@@ -1,7 +1,7 @@
 //extern crate time;
 
 use std::collections::HashMap;
-use std::env;
+use std::env::{self, Args};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 //use time::PreciseTime;
@@ -17,65 +17,57 @@ enum ErrorCodes {
 
 // TODO too long. pyramid of doom. ~5 more methods could be extracted
 fn main() {
-    let file_name = get_input_file_name();
-    let file_reader = FileReader { name: file_name };
-    let games = file_reader.read();
-    println!("READY");
-    let mut wait_for_more_input = true;
-    let stdin = io::stdin();
-    while wait_for_more_input {
-        match stdin.lock().lines().next() {
-            Some(result) => {
-                match result {
-                    Ok(line) => {
-                        if line.is_empty() {
-                            wait_for_more_input = false;
-                        } else {
-                            //let start = PreciseTime::now();
-                            let draw_from_line =
-                                LotteryDraw::create_from_line(line);
-                            match draw_from_line {
-                                Ok(draw) => games.count_game_matches(&draw)
-                                                 .print(),
-                                Err(e) => {
-                                    eprintln!("Invalid input: {}", e);
-                                    // no need to exit here, but the boilerplate
-                                    // code in the task description specified
-                                    // the loop to run while 5 numbers are read
-                                    // by scanf()
-                                    std::process::exit(
-                                        exit_code(ErrorCodes::InvalidInput));
+    let file_reader = FileReader::new(env::args());
+    match file_reader {
+        Ok(reader) => {
+            let games = reader.read();
+            println!("READY");
+            let mut wait_for_more_input = true;
+            let stdin = io::stdin();
+            while wait_for_more_input {
+                match stdin.lock().lines().next() {
+                    Some(result) => {
+                        match result {
+                            Ok(line) => {
+                                if line.is_empty() {
+                                    wait_for_more_input = false;
+                                } else {
+                                    //let start = PreciseTime::now();
+                                    let draw_from_line =
+                                        LotteryDraw::create_from_line(line);
+                                    match draw_from_line {
+                                        Ok(draw) => games.count_game_matches(&draw)
+                                            .print(),
+                                        Err(e) => {
+                                            eprintln!("Invalid input: {}", e);
+                                            // no need to exit here, but the boilerplate
+                                            // code in the task description specified
+                                            // the loop to run while 5 numbers are read
+                                            // by scanf()
+                                            std::process::exit(
+                                                exit_code(ErrorCodes::InvalidInput));
+                                        }
+                                    };
+                                    //let end = PreciseTime::now();
+                                    //println!("Output generated in {}", start.to(end));
                                 }
-                            };
-                            //let end = PreciseTime::now();
-                            //println!("Output generated in {}", start.to(end));
+                            },
+                            Err(e) => {
+                                eprintln!("Cannot read from stdin: {}", e);
+                                std::process::exit(exit_code(ErrorCodes::IoError));
+                            }
                         }
-                    },
-                    Err(e) => {
-                        eprintln!("Cannot read from stdin: {}", e); 
-                        std::process::exit(exit_code(ErrorCodes::IoError));
                     }
-                }
-            } 
-            None => wait_for_more_input = false // EOF?
-        };        
-    }
-}
-
-// TODO should be part of the FileReader maybe
-fn get_input_file_name() -> String {
-    let mut arguments = env::args();
-    arguments.next(); // arg[0] = executable
-    let result = arguments.next(); // arg[1] = input file
-    match result {
-        Some(r) => return r,
-        None => {
+                    None => wait_for_more_input = false // EOF?
+                };
+            }
+        },
+        Err(error_code) => {
             eprintln!("Wrong amount of arguments");
             eprintln!("Usage: ./lottery_homework input_file.name");
-            std::process::exit(exit_code(ErrorCodes::WrongParameters));
-        },
+            std::process::exit(error_code);
+        }
     }
-    // all other arguments are just disregarded
 }
 
 // TODO would be probably unnecessary with constants in a module
@@ -93,6 +85,16 @@ struct FileReader {
 }
 
 impl FileReader {
+    fn new(mut arguments: Args) -> Result<FileReader, i32> {
+        arguments.next(); // arg[0] = executable
+        let result = arguments.next(); // arg[1] = input file
+        match result {
+            Some(r) => return Ok(FileReader { name: r }),
+            None => return Err(exit_code(ErrorCodes::WrongParameters)),
+        }
+        // all other arguments are just disregarded
+    }
+
     fn read(self) -> LotteryGames {
         let mut result = LotteryGames::new();
         let input_file = match File::open(self.name.to_string()) {
@@ -284,5 +286,13 @@ impl LotteryResult {
             None => {}
         }
         self.winner_counts_by_matches.insert(matching_numbers, new_value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
     }
 }
