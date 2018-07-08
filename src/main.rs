@@ -176,7 +176,7 @@ impl LotteryGame {
                     }
                     result.numbers.push(i);
                 },
-                Err(e) => return Err(format!("{}", e))
+                Err(e) => return Err(format!("{} ({})", e, number))
             }            
         }
         if result.numbers.len() > DRAWN_NUMBERS {
