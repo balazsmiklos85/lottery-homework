@@ -252,10 +252,11 @@ impl LotteryResult {
         while numbers_matching <= 5 {
             match self.winner_counts_by_matches.get(&numbers_matching) {
                 Some(winners) => print!("{} ", winners),
-                None => print!("{}", 0),
+                None => print!("{} ", 0),
             }
             numbers_matching += 1;
         }        
+        println!("");
     }
 
     fn increase_count_for(&mut self, matching_numbers: i32) {
