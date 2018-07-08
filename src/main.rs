@@ -87,9 +87,9 @@ struct FileReader {
 impl FileReader {
     fn new(mut arguments: Args) -> Result<FileReader, i32> {
         arguments.next(); // arg[0] = executable
-        let result = arguments.next(); // arg[1] = input file
-        match result {
-            Some(r) => return Ok(FileReader { name: r }),
+        let input_file_argument = arguments.next(); // arg[1] = input file
+        match input_file_argument {
+            Some(input_file) => return Ok(FileReader { name: input_file }),
             None => return Err(exit_code(ErrorCodes::WrongParameters)),
         }
         // all other arguments are just disregarded
