@@ -8,6 +8,7 @@ use std::io::{self, BufRead, BufReader};
 
 static DRAWN_NUMBERS: usize = 5;
 static MAX_NUMBER: u8 = 90;
+static MIN_NUMBER: u8 = 1;
 
 enum ErrorCodes {
     WrongParameters,
@@ -88,6 +89,9 @@ fn line_to_numbers(line: String) -> Result<Vec<u8>, String> {
             Ok(converted_value) => {
                 if converted_value > MAX_NUMBER {
                     return Err(format!("Number too high ({})",
+                                       converted_value));
+                } else if converted_value < MIN_NUMBER {
+                    return Err(format!("Number too low ({})",
                                        converted_value));
                 }
                 if converted_numbers.contains(&converted_value) {
@@ -271,14 +275,96 @@ impl LotteryResult {
 
 #[cfg(test)]
 mod tests {
-    use LotteryGame;
+    use line_to_numbers;
+
+    fn test_line_to_numbers(line: &str) -> Result<Vec<u8>, String> {
+        return line_to_numbers(line.to_string());
+    }
 
     #[test]
-    fn lottery_game_1_2_3_4_5() {
-        let game = LotteryGame::create_from_line("1 2 3 4 5".to_string());
-        match game {
-
+    fn parsing_line_1_2_3_4_5() {
+        let line = test_line_to_numbers("1 2 3 4 5");
+        match line {
+            Ok(numbers) => {
+                assert_eq!(numbers[0], 1);
+                assert_eq!(numbers[1], 2);
+                assert_eq!(numbers[2], 3);
+                assert_eq!(numbers[3], 4);
+                assert_eq!(numbers[4], 5);
+            },
+            Err(_ignored) => assert!(false),
         }
-        assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn parsing_line_1_2_3_4_5_foo() {
+        let line = test_line_to_numbers("1 2 3 4 5 foo");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message,
+                           "invalid digit found in string (foo)"),
+        }
+    }
+
+    #[test]
+    fn parsing_line_0_2_3_4_5() {
+        let line = test_line_to_numbers("0 2 3 4 5");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message, "Number too low (0)"),
+        }
+    }
+
+    #[test]
+    fn parsing_line_1_2_3_4_250() {
+        let line = test_line_to_numbers("1 2 3 4 250");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message, "Number too high (250)"),
+        }
+    }
+
+    #[test]
+    fn parsing_line_1_2_3_4_2500() {
+        let line = test_line_to_numbers("1 2 3 4 500");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message,
+                           "number too large to fit in target type (500)"),
+        }
+    }
+
+    #[test]
+    fn parsing_line_1_2_4_4_5() {
+        let line = test_line_to_numbers("1 2 4 4 5");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message, "Number found twice (4)"),
+        }
+    }
+
+    #[test]
+    fn parsing_line_1_2_3_4_5_6() {
+        let line = test_line_to_numbers("1 2 3 4 5 6");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message, "Too many numbers in line (6)"),
+        }
+    }
+
+    #[test]
+    fn parsing_line_1_2_3_4_foo() {
+        let line = test_line_to_numbers("1 2 3 4");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message, "Not enough numbers in line (4)"),
+        }
     }
 }
