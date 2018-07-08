@@ -174,17 +174,18 @@ impl LotteryGames {
 
     // TODO possibly could be optimized for berrer performance
     // ( ) paralelization should make this run faster 
-    //     -> pro: does not require thread creation as ofthen as in
+    //     -> pro: does not require thread creation as often as in
     //     count_matching_numbers(), so it shouldn't cause problems
     //     -> con: I should learn to handle threading in Rust properly to see
     //     how can I borrow match_counts mutably from the threads
+    // ( ) no need to store 0 and 1 matches.
     fn count_game_matches(&self, draw: &LotteryDraw) -> LotteryResult {
-        let mut match_counts = LotteryResult::new();
+        let mut winner_counts_by_match_count = LotteryResult::new();
         for game in &(self.games) {
             let matching_numbers = draw.count_matching_numbers(&game);
-            match_counts.increase_count_for(matching_numbers);
+            winner_counts_by_match_count.increase_count_for(matching_numbers);
         }
-        return match_counts;
+        return winner_counts_by_match_count;
     }
 }
 
@@ -276,6 +277,8 @@ impl LotteryResult {
 #[cfg(test)]
 mod tests {
     use line_to_numbers;
+    use LotteryGame;
+    use LotteryDraw;
 
     fn test_line_to_numbers(line: &str) -> Result<Vec<u8>, String> {
         return line_to_numbers(line.to_string());
@@ -360,11 +363,87 @@ mod tests {
 
     #[test]
     fn parsing_line_1_2_3_4_foo() {
-        let line = test_line_to_numbers("1 2 3 4");
+        let line = test_line_to_numbers("1 2 3 4 foo");
         match line {
             Ok(_ignored) => assert!(false),
             Err(error_message) =>
-                assert_eq!(error_message, "Not enough numbers in line (4)"),
+                assert_eq!(error_message,
+                           "invalid digit found in string (foo)"),
         }
+    }
+
+    #[test]
+    fn parsing_empty_line() {
+        let line = test_line_to_numbers("");
+        match line {
+            Ok(_ignored) => assert!(false),
+            Err(error_message) =>
+                assert_eq!(error_message,
+                           "cannot parse integer from empty string ()"),
+        }
+    }
+
+    #[test]
+    fn matching_1_2_3_4_5_with_1_2_3_4_5() {
+        let game = LotteryGame { numbers: vec![1, 2, 3, 4, 5] };
+        let draw = LotteryDraw { numbers: vec![1, 2, 3, 4, 5] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 5);
+    }
+
+    #[test]
+    fn matching_1_2_3_4_5_with_1_2_3_4_6() {
+        let game = LotteryGame { numbers: vec![1, 2, 3, 4, 5] };
+        let draw = LotteryDraw { numbers: vec![1, 2, 3, 4, 6] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 4);
+    }
+
+    #[test]
+    fn matching_1_2_3_4_5_with_1_2_3_7_6() {
+        let game = LotteryGame { numbers: vec![1, 2, 3, 4, 5] };
+        let draw = LotteryDraw { numbers: vec![1, 2, 3, 7, 6] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 3);
+    }
+
+    #[test]
+    fn matching_1_2_3_4_5_with_1_2_8_7_6() {
+        let game = LotteryGame { numbers: vec![1, 2, 3, 4, 5] };
+        let draw = LotteryDraw { numbers: vec![1, 2, 8, 7, 6] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 2);
+    }
+
+    #[test]
+    fn matching_1_2_3_4_5_with_1_9_8_7_6() {
+        let game = LotteryGame { numbers: vec![1, 2, 3, 4, 5] };
+        let draw = LotteryDraw { numbers: vec![1, 9, 8, 7, 6] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 1);
+    }
+
+    #[test]
+    fn matching_1_2_3_4_5_with_10_9_8_7_6() {
+        let game = LotteryGame { numbers: vec![1, 2, 3, 4, 5] };
+        let draw = LotteryDraw { numbers: vec![10, 9, 8, 7, 6] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 0);
+    }
+
+    #[test]
+    fn matching_1_2_3_4_5_with_5_4_3_2_1() {
+        let game = LotteryGame { numbers: vec![1, 2, 3, 4, 5] };
+        let draw = LotteryDraw { numbers: vec![5, 4, 3, 2, 1] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 5);
+    }
+
+    #[test]
+    fn matching_5_4_3_2_1_with_1_2_3_4_5() {
+        let game = LotteryGame { numbers: vec![5, 4, 3, 2, 1] };
+        let draw = LotteryDraw { numbers: vec![1, 2, 3, 4, 5] };
+        let match_count = draw.count_matching_numbers(&game);
+        assert_eq!(match_count, 5);
     }
 }
