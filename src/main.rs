@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::env::{self, Args};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
+use std::io::Error;
 //use time::PreciseTime;
 
 static DRAWN_NUMBERS: usize = 5;
@@ -16,50 +17,19 @@ enum ErrorCodes {
     InvalidInput,
 }
 
-// TODO too long. pyramid of doom. ~5 more methods could be extracted
 fn main() {
     let file_reader = FileReader::new(env::args());
     match file_reader {
         Ok(reader) => {
             let games = reader.read();
             println!("READY");
-            let mut wait_for_more_input = true;
+            let mut wait_for_more = true;
             let stdin = io::stdin();
-            while wait_for_more_input {
+            while wait_for_more {
                 match stdin.lock().lines().next() {
-                    Some(result) => {
-                        match result {
-                            Ok(line) => {
-                                if line.is_empty() {
-                                    wait_for_more_input = false;
-                                } else {
-                                    //let start = PreciseTime::now();
-                                    let draw_from_line =
-                                        LotteryDraw::create_from_line(line);
-                                    match draw_from_line {
-                                        Ok(draw) => games.count_game_matches(&draw)
-                                            .print(),
-                                        Err(e) => {
-                                            eprintln!("Invalid input: {}", e);
-                                            // no need to exit here, but the boilerplate
-                                            // code in the task description specified
-                                            // the loop to run while 5 numbers are read
-                                            // by scanf()
-                                            std::process::exit(
-                                                exit_code(ErrorCodes::InvalidInput));
-                                        }
-                                    };
-                                    //let end = PreciseTime::now();
-                                    //println!("Output generated in {}", start.to(end));
-                                }
-                            },
-                            Err(e) => {
-                                eprintln!("Cannot read from stdin: {}", e);
-                                std::process::exit(exit_code(ErrorCodes::IoError));
-                            }
-                        }
-                    }
-                    None => wait_for_more_input = false // EOF?
+                    Some(line_read) =>
+                        wait_for_more = handle_line(&games, line_read),
+                    None => wait_for_more = false // EOF?
                 };
             }
         },
@@ -100,6 +70,8 @@ fn line_to_numbers(line: String) -> Result<Vec<u8>, String> {
                 }
                 converted_numbers.push(converted_value);
             },
+            // I don't care if 5 numbers are already read, I'm not going to
+            // re-implement scanf()
             Err(conversion_error) => return Err(
                 format!("{} ({})", conversion_error, number))
         }
@@ -112,6 +84,40 @@ fn line_to_numbers(line: String) -> Result<Vec<u8>, String> {
                            converted_numbers.len()));
     }
     return Ok(converted_numbers);
+}
+
+fn handle_line(games: &LotteryGames, line_read: Result<String, Error>) -> bool {
+    match line_read {
+        Ok(line) => {
+            if line.is_empty() {
+                return false;
+            } else {
+                //let start = PreciseTime::now();
+                let winner_count = count_winners_for_line(games, line);
+                winner_count.print();
+                //let end = PreciseTime::now();
+                //println!("Output generated in {}", start.to(end));
+            }
+        },
+        Err(e) => {
+            eprintln!("Cannot read from stdin: {}", e);
+            std::process::exit(exit_code(ErrorCodes::IoError));
+        }
+    }
+    return true;
+}
+
+fn count_winners_for_line(games: &LotteryGames, line: String) -> LotteryResult {
+    match LotteryDraw::create_from_line(line) {
+        Ok(draw) => return games.count_game_matches(&draw),
+        Err(e) => {
+            eprintln!("Invalid input: {}", e);
+            // no need to exit here, but the boilerplate code in the task
+            // description specified the loop to run while 5 numbers are read by
+            // scanf()
+            std::process::exit(exit_code(ErrorCodes::InvalidInput));
+        }
+    };
 }
 
 // TODO abstraction can be optimized away if necessary
