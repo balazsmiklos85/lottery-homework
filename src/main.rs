@@ -212,6 +212,10 @@ impl LotteryDraw {
             return Err(format!("Too many numbers drawn ({})",
                        draw.numbers.len()));
         }
+        if draw.numbers.len() < DRAWN_NUMBERS {
+            return Err(format!("Not enough numbers drawn ({})",
+                       draw.numbers.len()));
+        }
         return Ok(draw);
     }
 
