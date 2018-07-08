@@ -173,6 +173,10 @@ impl LotteryGame {
             return Err(format!("Too many numbers in line ({})",
                 result.numbers.len()));    
         }
+        if result.numbers.len() < DRAWN_NUMBERS {
+            return Err(format!("Not enough numbers in line ({})",
+                result.numbers.len()));    
+        }
         return Ok(result);
     }
 }
