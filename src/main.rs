@@ -12,6 +12,7 @@ static MAX_NUMBER: u8 = 90;
 enum ErrorCodes {
     WrongParameters,
     IoError,
+    InvalidInput,
 }
 
 // TODO too long. pyramid of doom. ~5 more methods could be extracted
@@ -36,7 +37,15 @@ fn main() {
                             match draw_from_line {
                                 Ok(draw) => games.count_game_matches(&draw)
                                                  .print(),
-                                Err(e) => eprintln!("Invalid input: {}", e),
+                                Err(e) => {
+                                    eprintln!("Invalid input: {}", e);
+                                    // no need to exit here, but the boilerplate
+                                    // code in the task description specified
+                                    // the loop to run while 5 numbers are read
+                                    // by scanf()
+                                    std::process::exit(
+                                        exit_code(ErrorCodes::InvalidInput));
+                                }
                             };
                             //let end = PreciseTime::now();
                             //println!("Output generated in {}", start.to(end));
@@ -74,6 +83,7 @@ fn exit_code(error_code: ErrorCodes) -> i32 {
     match error_code {
         ErrorCodes::WrongParameters => return 1,
         ErrorCodes::IoError => return 2,
+        ErrorCodes::InvalidInput => return 3,
     }
 }
 
