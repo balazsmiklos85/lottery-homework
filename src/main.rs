@@ -14,6 +14,7 @@ enum ErrorCodes {
     IoError,
 }
 
+// TODO too long. pyramid of doom. ~5 more methods could be extracted
 fn main() {
     let file_name = get_input_file_name();
     let file_reader = FileReader { name: file_name };
@@ -30,7 +31,8 @@ fn main() {
                             wait_for_more_input = false;
                         } else {
                             //let start = PreciseTime::now();
-                            let draw_from_line = LotteryDraw::from_line(line);
+                            let draw_from_line =
+                                LotteryDraw::create_from_line(line);
                             match draw_from_line {
                                 Ok(draw) => games.count_game_matches(&draw)
                                                  .print(),
@@ -51,6 +53,7 @@ fn main() {
     }
 }
 
+// TODO should be part of the FileReader maybe
 fn get_input_file_name() -> String {
     let mut arguments = env::args();
     arguments.next(); // arg[0] = executable
@@ -92,7 +95,7 @@ impl FileReader {
         for input_line in BufReader::new(input_file).lines() {
             match input_line {
                 Ok(line) => {
-                    let game = LotteryGame::from_line(line);
+                    let game = LotteryGame::create_from_line(line);
                     match game {
                         Ok(g) => result.add(g),
                         Err(e) => eprintln!("Error: {}. Line ignored", e),  
@@ -148,7 +151,7 @@ impl LotteryGame {
         return LotteryGame { numbers: Vec::new() };
     }
 
-    fn from_line(line: String) -> Result<LotteryGame, String> {
+    fn create_from_line(line: String) -> Result<LotteryGame, String> {
         let mut result = LotteryGame::new();
         let split_line = line.split(" ");
         for number in split_line {
@@ -184,7 +187,7 @@ impl LotteryDraw {
         return LotteryDraw { numbers: Vec::new() };
     }
 
-    fn from_line(line: String) -> Result<LotteryDraw, String> {
+    fn create_from_line(line: String) -> Result<LotteryDraw, String> {
         let mut draw = LotteryDraw::new();
         let numbers = line.split(" ");
         for number in numbers {
@@ -215,7 +218,8 @@ impl LotteryDraw {
     //     -> maybe, not supported since 1.3
     // (x) paralelization should make this run faster 
     //     -> thread/work management can take more time than the gain
-    // (x) contains() should run faster on a sorted Vec -> apparently not (!?)
+    // (x) contains() should run faster on a sorted Vec with binary search
+    //     -> apparently not (!?), maybe it would work better on bigger arrays
     // ( ) custom data structure? (Vec<u8> based, working like a BitSet, but
     //     hardcoded for the 5/90 lottery)
     // ( ) maybe I just didn't use rayon properly, and paralelization could
@@ -233,6 +237,8 @@ impl LotteryDraw {
 
 // TODO abstaction can be optimized away if necessary
 struct LotteryResult {
+    // TODO possible optimization: integer indexed hashmap could basically
+    // become a vector
     winner_counts_by_matches: HashMap<i32, i32>
 }
 
