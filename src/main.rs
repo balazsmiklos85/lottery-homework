@@ -79,6 +79,37 @@ fn exit_code(error_code: ErrorCodes) -> i32 {
     }
 }
 
+fn line_to_numbers(line: String) -> Result<Vec<u8>, String> {
+    let mut converted_numbers = Vec::new();
+    let split_line = line.split(" ");
+    for number in split_line {
+        let converted_number = number.parse::<u8>();
+        match converted_number {
+            Ok(converted_value) => {
+                if converted_value > MAX_NUMBER {
+                    return Err(format!("Number too high ({})",
+                                       converted_value));
+                }
+                if converted_numbers.contains(&converted_value) {
+                    return Err(format!("Number found twice ({})",
+                                       converted_value));
+                }
+                converted_numbers.push(converted_value);
+            },
+            Err(conversion_error) => return Err(
+                format!("{} ({})", conversion_error, number))
+        }
+    }
+    if converted_numbers.len() > DRAWN_NUMBERS {
+        return Err(format!("Too many numbers in line ({})",
+                           converted_numbers.len()));
+    } else if converted_numbers.len() < DRAWN_NUMBERS {
+        return Err(format!("Not enough numbers in line ({})",
+                           converted_numbers.len()));
+    }
+    return Ok(converted_numbers);
+}
+
 // TODO abstraction can be optimized away if necessary
 struct FileReader {
     name: String,
@@ -159,37 +190,11 @@ struct LotteryGame {
 }
 
 impl LotteryGame {
-    fn new() -> LotteryGame {
-        return LotteryGame { numbers: Vec::new() };
-    }
-
     fn create_from_line(line: String) -> Result<LotteryGame, String> {
-        let mut result = LotteryGame::new();
-        let split_line = line.split(" ");
-        for number in split_line {
-            let integer = number.parse::<u8>();
-            match integer {
-                Ok(i) => {
-                    if i > MAX_NUMBER {
-                        return Err(format!("Number too high ({})", i));
-                    }
-                    if result.numbers.contains(&i) {
-                        return Err(format!("Number found twice ({})", i));
-                    }
-                    result.numbers.push(i);
-                },
-                Err(e) => return Err(format!("{} ({})", e, number))
-            }            
+        match line_to_numbers(line) {
+            Ok(numbers) => return Ok(LotteryGame { numbers }),
+            Err(error) => return Err(error),
         }
-        if result.numbers.len() > DRAWN_NUMBERS {
-            return Err(format!("Too many numbers in line ({})",
-                result.numbers.len()));    
-        }
-        if result.numbers.len() < DRAWN_NUMBERS {
-            return Err(format!("Not enough numbers in line ({})",
-                result.numbers.len()));    
-        }
-        return Ok(result);
     }
 }
 
@@ -199,36 +204,11 @@ struct LotteryDraw {
 }
 
 impl LotteryDraw {
-    fn new() -> LotteryDraw {
-        return LotteryDraw { numbers: Vec::new() };
-    }
-
     fn create_from_line(line: String) -> Result<LotteryDraw, String> {
-        let mut draw = LotteryDraw::new();
-        let numbers = line.split(" ");
-        for number in numbers {
-            let integer = number.parse::<u8>();
-            match integer {
-                Ok(i) => {
-                    if i > MAX_NUMBER {
-                        return Err(format!("Number too high ({})", i));
-                    }
-                    draw.numbers.push(i);
-                },
-                Err(e) => return Err(
-                            format!("Could not convert the number {}: {}",
-                                number, e))
-            }            
+        match line_to_numbers(line) {
+            Ok(numbers) => return Ok(LotteryDraw { numbers }),
+            Err(error) => return Err(error),
         }
-        if draw.numbers.len() > DRAWN_NUMBERS {
-            return Err(format!("Too many numbers drawn ({})",
-                       draw.numbers.len()));
-        }
-        if draw.numbers.len() < DRAWN_NUMBERS {
-            return Err(format!("Not enough numbers drawn ({})",
-                       draw.numbers.len()));
-        }
-        return Ok(draw);
     }
 
     // TODO possibly could be optimized for berrer performance
@@ -291,8 +271,14 @@ impl LotteryResult {
 
 #[cfg(test)]
 mod tests {
+    use LotteryGame;
+
     #[test]
-    fn it_works() {
+    fn lottery_game_1_2_3_4_5() {
+        let game = LotteryGame::create_from_line("1 2 3 4 5".to_string());
+        match game {
+
+        }
         assert_eq!(2 + 2, 4);
     }
 }
