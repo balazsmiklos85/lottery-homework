@@ -1,2 +1,4 @@
 /target
 **/*.rs.bk
+/lottery_homework.iml
+/.idea
