@@ -55,7 +55,8 @@ This is a quite naive approach. As the current solution worked well on my
 computer and provided its results in less that 1 second, I left it as it is.
 However, possibilities of future optimizations are pointed out in the code in
 place as TODO comments. (Not only for speed optimizations, but also for code
-organization.)
+organization.) Also optimizations which were tried - but failed - are documented
+there as well.
 
 ### Comments
 
